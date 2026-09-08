@@ -180,6 +180,20 @@ const SUB_PROGRAMS = [
 const ARROW_LEFT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
 const ARROW_RIGHT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
 
+const AUDIO_FILES = ['sounds/book.mp3','sounds/admin.mp3','sounds/gift_reading.mp3','sounds/gift_cert.mp3','sounds/gift_rc.mp3','sounds/gift_debate.mp3','sounds/gift_liberal.mp3'];
+const AUDIO_CACHE = {};
+
+function preloadAllAudio(){
+  AUDIO_FILES.forEach(function(path){
+    const a = new Audio();
+    a.preload = 'auto';
+    a.src = path;
+    a.load();
+    AUDIO_CACHE[path] = a;
+  });
+}
+preloadAllAudio();
+
 let idleTimer = null;
 let lastText = '';
 let lastAudio = '';
@@ -252,15 +266,28 @@ function playChimeThenVoice(text, audioFile){
   }catch(e){}
 
   if(audioFile){
-    const player = new Audio(audioFile);
+    const player = AUDIO_CACHE[audioFile] || new Audio(audioFile);
     player.onerror = function(){
       console.warn('오디오 파일을 찾을 수 없어 음성합성으로 대체합니다:', audioFile);
       speak(text);
     };
-    player.play().catch(function(err){
-      console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
-      speak(text);
-    });
+
+    const doPlay = function(){
+      player.currentTime = 0;
+      player.play().catch(function(err){
+        console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
+        speak(text);
+      });
+    };
+
+    // readyState >= 3 (HAVE_FUTURE_DATA) means enough is buffered to play
+    // through without stalling/clipping. Otherwise wait for canplaythrough.
+    if(player.readyState >= 3){
+      doPlay();
+    } else {
+      player.addEventListener('canplaythrough', doPlay, { once:true });
+      player.load();
+    }
   } else {
     speak(text);
   }
