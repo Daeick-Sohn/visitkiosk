@@ -50,8 +50,8 @@ html,body{
 .clock{ font-size:16px; font-weight:600; color:var(--ink-soft); font-variant-numeric: tabular-nums; }
 
 .hero{ padding: 14px 56px 22px; }
-.hero h1{ font-size:42px; font-weight:800; line-height:1.3; max-width:760px; }
-.hero p{ margin-top:10px; font-size:18px; color:var(--ink-soft); font-weight:500; }
+.hero h1{ font-size:54px; font-weight:800; line-height:1.25; white-space:nowrap; }
+.hero p{ margin-top:12px; font-size:22px; color:var(--ink-soft); font-weight:500; }
 
 .maingrid{
   flex:1; padding: 8px 56px 40px;
@@ -65,13 +65,13 @@ html,body{
 }
 .card:active{ transform: scale(0.97); }
 .card .icon{
-  width:58px; height:58px; border-radius:16px;
+  width:72px; height:72px; border-radius:18px;
   display:flex; align-items:center; justify-content:center;
   background: var(--tint, #EAF0EC);
 }
-.card .icon svg{ width:30px; height:30px; }
-.card h3{ font-size:23px; font-weight:800; line-height:1.35; }
-.card p{ font-size:15.5px; color:var(--ink-soft); font-weight:500; line-height:1.5; }
+.card .icon svg{ width:38px; height:38px; }
+.card h3{ font-size:30px; font-weight:800; line-height:1.35; }
+.card p{ font-size:19px; color:var(--ink-soft); font-weight:500; line-height:1.55; }
 
 .backrow{ padding: 0 56px; }
 .backbtn{
@@ -116,7 +116,7 @@ html,body{
       <div class="clock" id="clock1"></div>
     </div>
     <div class="hero">
-      <h1>안녕하세요, 무엇 때문에<br>방문해 주셨나요?</h1>
+      <h1>안녕하세요, 무엇 때문에 방문해 주셨나요?</h1>
       <p>해당하는 항목을 눌러주세요.</p>
     </div>
     <div class="maingrid">
@@ -226,6 +226,7 @@ function replay(){
 function playChimeThenSpeak(text){
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === 'suspended') ctx.resume();
     const beep = function(freq, start, dur){
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -242,18 +243,26 @@ function playChimeThenSpeak(text){
     beep(660, 0.22, 0.22);
   }catch(e){}
 
-  setTimeout(function(){ speak(text); }, 700);
+  /* speak() must run synchronously inside the click handler, not after a
+     setTimeout — a delay breaks the browser's "user activation" window and
+     silently blocks speech synthesis on some browsers/TVs. */
+  speak(text);
 }
 
 function speak(text){
-  if(!('speechSynthesis' in window)) return;
+  if(!('speechSynthesis' in window)){
+    console.warn('speechSynthesis not supported on this browser');
+    return;
+  }
   speechSynthesis.cancel();
+  speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ko-KR';
   u.rate = 0.92;
   const voices = speechSynthesis.getVoices();
   const kv = voices.find(function(v){ return v.lang === 'ko-KR'; });
   if(kv) u.voice = kv;
+  u.onerror = function(e){ console.warn('speech error', e.error); };
   speechSynthesis.speak(u);
 }
 if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = function(){}; }
