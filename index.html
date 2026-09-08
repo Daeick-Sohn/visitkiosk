@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>교양교육본부 안내 키오스크</title>
+<style>
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
+  font-weight: 45 920;
+}
+
+:root{
+  --bg: #F2F4F3;
+  --panel: #FFFFFF;
+  --ink: #16201C;
+  --ink-soft: #4A5650;
+  --line: #DCE2DE;
+  --primary: #1F4B3F;
+  --amber: #D98E2E;
+  --radius: 24px;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{
+  width:100%; height:100%; overflow:hidden;
+  background:var(--bg); color:var(--ink);
+  font-family:'Pretendard', -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app{ position:relative; width:100vw; height:100vh; }
+
+.screen{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transform: translateY(14px);
+  transition: opacity .3s ease, transform .3s ease;
+}
+.screen.active{ opacity:1; pointer-events:auto; transform:translateY(0); }
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 34px 56px 10px;
+}
+.brand .org{ font-size:16px; font-weight:600; color:var(--ink-soft); }
+.brand .title{ font-size:26px; font-weight:800; }
+.clock{ font-size:16px; font-weight:600; color:var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+.hero{ padding: 14px 56px 22px; }
+.hero h1{ font-size:42px; font-weight:800; line-height:1.3; max-width:760px; }
+.hero p{ margin-top:10px; font-size:18px; color:var(--ink-soft); font-weight:500; }
+
+.maingrid{
+  flex:1; padding: 8px 56px 40px;
+  display:grid; grid-template-columns: repeat(3, 1fr); gap:24px;
+}
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  padding: 36px 28px; display:flex; flex-direction:column; gap:16px;
+  cursor:pointer; text-align:left;
+  transition: transform .15s ease;
+}
+.card:active{ transform: scale(0.97); }
+.card .icon{
+  width:58px; height:58px; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;
+  background: var(--tint, #EAF0EC);
+}
+.card .icon svg{ width:30px; height:30px; }
+.card h3{ font-size:23px; font-weight:800; line-height:1.35; }
+.card p{ font-size:15.5px; color:var(--ink-soft); font-weight:500; line-height:1.5; }
+
+.backrow{ padding: 0 56px; }
+.backbtn{
+  border:none; background:var(--panel); border:1px solid var(--line);
+  border-radius:14px; padding:14px 22px; font-family:inherit;
+  font-weight:700; font-size:16px; cursor:pointer;
+}
+
+#action{ align-items:center; justify-content:center; text-align:center; }
+.action-wrap{ display:flex; flex-direction:column; align-items:center; gap:28px; }
+.arrow{ width:220px; height:220px; display:flex; align-items:center; justify-content:center; }
+.arrow svg{ width:100%; height:100%; }
+.arrow.left svg{ animation: nudgeLeft 1.1s ease-in-out infinite; }
+.arrow.right svg{ animation: nudgeRight 1.1s ease-in-out infinite; }
+@keyframes nudgeLeft{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(-16px);} }
+@keyframes nudgeRight{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(16px);} }
+
+.action-caption{ font-size:38px; font-weight:800; }
+.action-sub{ font-size:18px; color:var(--ink-soft); font-weight:600; }
+.action-btns{ display:flex; gap:14px; margin-top: 8px; }
+.btn{
+  border:none; cursor:pointer; font-family:inherit; font-weight:800; font-size:17px;
+  border-radius:16px; padding:16px 26px; display:flex; align-items:center; gap:8px;
+}
+.btn-ghost{ background:var(--panel); color:var(--ink); border:1px solid var(--line); }
+.btn-primary{ background:var(--primary); color:#fff; }
+
+.idlebar{
+  position:absolute; left:0; bottom:0; height:4px; background:var(--amber);
+  width:100%; transform-origin:left;
+}
+.idlebar.run{ animation: shrink 12s linear forwards; }
+@keyframes shrink{ from{ transform:scaleX(1);} to{ transform:scaleX(0);} }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section class="screen active" id="home">
+    <div class="topbar">
+      <div class="brand"><div class="org">교양교육본부</div><div class="title">방문 안내 키오스크</div></div>
+      <div class="clock" id="clock1"></div>
+    </div>
+    <div class="hero">
+      <h1>안녕하세요, 무엇 때문에<br>방문해 주셨나요?</h1>
+      <p>해당하는 항목을 눌러주세요.</p>
+    </div>
+    <div class="maingrid">
+      <div class="card" onclick="chooseMain('book')">
+        <div class="icon" style="--tint:#EAF0EC"><svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+        <h3>독서모임 도서<br>대여 · 반납</h3>
+        <p>독서모임 도서를 빌리거나 반납하러 오신 경우</p>
+      </div>
+      <div class="card" onclick="showSub()">
+        <div class="icon" style="--tint:#F6ECE9"><svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><rect x="3" y="8" width="18" height="4"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg></div>
+        <h3>프로그램<br>상품 수령</h3>
+        <p>독서모임 · 독서인증제 · RC프로그램 · 토론광장 · 교양 관련 상품 수령</p>
+      </div>
+      <div class="card" onclick="chooseMain('admin')">
+        <div class="icon" style="--tint:#EAF0F5"><svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></div>
+        <h3>교양 수업<br>행정 업무</h3>
+        <p>교양 수업 관련 행정 처리가 필요하신 경우</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="sub">
+    <div class="topbar">
+      <div class="brand"><div class="org">교양교육본부</div><div class="title">프로그램 상품 수령</div></div>
+      <div class="clock" id="clock2"></div>
+    </div>
+    <div class="backrow"><button class="backbtn" onclick="goHome()">← 처음으로</button></div>
+    <div class="maingrid" id="subgrid"></div>
+  </section>
+
+  <section class="screen" id="action">
+    <div class="action-wrap">
+      <div class="arrow" id="arrowBox"></div>
+      <div class="action-caption" id="actionCaption"></div>
+      <div class="action-sub">담당자가 곧 안내해 드릴게요</div>
+      <div class="action-btns">
+        <button class="btn btn-ghost" onclick="replay()">다시 듣기</button>
+        <button class="btn btn-primary" onclick="goHome()">처음으로</button>
+      </div>
+    </div>
+    <div class="idlebar" id="idlebar"></div>
+  </section>
+
+</div>
+
+<script>
+const SUB_PROGRAMS = [
+  { id:'reading', label:'독서모임',   tint:'#EAF0EC', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id:'cert',    label:'독서인증제', tint:'#F6ECE9', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 14.5 7 22l5-3 5 3-2-7.5"/></svg>' },
+  { id:'rc',      label:'RC프로그램', tint:'#EAF0F5', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { id:'debate',  label:'토론광장',   tint:'#F5EEE7', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { id:'liberal', label:'교양 관련',  tint:'#EFEFEF', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>' },
+];
+
+const ARROW_LEFT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
+const ARROW_RIGHT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+
+let idleTimer = null;
+let lastText = '';
+
+function switchScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome(){
+  switchScreen('home');
+  clearTimeout(idleTimer);
+  document.getElementById('idlebar').classList.remove('run');
+  speechSynthesis.cancel();
+}
+
+function showSub(){
+  const grid = document.getElementById('subgrid');
+  grid.innerHTML = '';
+  SUB_PROGRAMS.forEach(p=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="icon" style="--tint:' + p.tint + '">' + p.icon + '</div><h3>' + p.label + '</h3><p>' + p.label + ' 상품을 수령하러 오신 경우</p>';
+    card.onclick = function(){ announce(p.label + ' 상품 수령', 'left'); };
+    grid.appendChild(card);
+  });
+  switchScreen('sub');
+}
+
+function chooseMain(kind){
+  if(kind === 'book') announce('독서모임 도서 대여', 'left');
+  if(kind === 'admin') announce('교양 교육 행정 업무', 'right');
+}
+
+function announce(text, dir){
+  lastText = text;
+  const box = document.getElementById('arrowBox');
+  box.className = 'arrow ' + dir;
+  box.innerHTML = dir === 'left' ? ARROW_LEFT : ARROW_RIGHT;
+  document.getElementById('actionCaption').textContent = text;
+  switchScreen('action');
+  playChimeThenSpeak(text);
+  restartIdle();
+}
+
+function replay(){
+  playChimeThenSpeak(lastText);
+  restartIdle();
+}
+
+function playChimeThenSpeak(text){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = function(freq, start, dur){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.02);
+    };
+    beep(880, 0, 0.18);
+    beep(660, 0.22, 0.22);
+  }catch(e){}
+
+  setTimeout(function(){ speak(text); }, 700);
+}
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR';
+  u.rate = 0.92;
+  const voices = speechSynthesis.getVoices();
+  const kv = voices.find(function(v){ return v.lang === 'ko-KR'; });
+  if(kv) u.voice = kv;
+  speechSynthesis.speak(u);
+}
+if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = function(){}; }
+
+function restartIdle(){
+  clearTimeout(idleTimer);
+  const bar = document.getElementById('idlebar');
+  bar.classList.remove('run');
+  void bar.offsetWidth;
+  bar.classList.add('run');
+  idleTimer = setTimeout(goHome, 12000);
+}
+
+function tickClock(){
+  const now = new Date();
+  const str = now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('clock1').textContent = str;
+  document.getElementById('clock2').textContent = str;
+}
+tickClock();
+setInterval(tickClock, 10000);
+</script>
+</body>
+</html>
