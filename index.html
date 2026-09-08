@@ -164,11 +164,11 @@ html,body{
 
 <script>
 const SUB_PROGRAMS = [
-  { id:'reading', label:'독서모임',   tint:'#EAF0EC', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
-  { id:'cert',    label:'독서인증제', tint:'#F6ECE9', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 14.5 7 22l5-3 5 3-2-7.5"/></svg>' },
-  { id:'rc',      label:'RC프로그램', tint:'#EAF0F5', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-  { id:'debate',  label:'토론광장',   tint:'#F5EEE7', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
-  { id:'liberal', label:'교양 관련',  tint:'#EFEFEF', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>' },
+  { id:'reading', label:'독서모임',   tint:'#EAF0EC', audio:'sounds/gift_reading.mp3', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' },
+  { id:'cert',    label:'독서인증제', tint:'#F6ECE9', audio:'sounds/gift_cert.mp3', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 14.5 7 22l5-3 5 3-2-7.5"/></svg>' },
+  { id:'rc',      label:'RC프로그램', tint:'#EAF0F5', audio:'sounds/gift_rc.mp3', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { id:'debate',  label:'토론광장',   tint:'#F5EEE7', audio:'sounds/gift_debate.mp3', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
+  { id:'liberal', label:'교양 관련',  tint:'#EFEFEF', audio:'sounds/gift_liberal.mp3', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>' },
 ];
 
 const ARROW_LEFT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
@@ -176,6 +176,7 @@ const ARROW_RIGHT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" strok
 
 let idleTimer = null;
 let lastText = '';
+let lastAudio = '';
 
 function switchScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -196,34 +197,35 @@ function showSub(){
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = '<div class="icon" style="--tint:' + p.tint + '">' + p.icon + '</div><h3>' + p.label + '</h3><p>' + p.label + ' 상품을 수령하러 오신 경우</p>';
-    card.onclick = function(){ announce(p.label + ' 상품 수령', 'left'); };
+    card.onclick = function(){ announce(p.label + ' 상품 수령', 'left', p.audio); };
     grid.appendChild(card);
   });
   switchScreen('sub');
 }
 
 function chooseMain(kind){
-  if(kind === 'book') announce('독서모임 도서 대여', 'left');
-  if(kind === 'admin') announce('교양 교육 행정 업무', 'right');
+  if(kind === 'book') announce('독서모임 도서 대여', 'left', 'sounds/book.mp3');
+  if(kind === 'admin') announce('교양 교육 행정 업무', 'right', 'sounds/admin.mp3');
 }
 
-function announce(text, dir){
+function announce(text, dir, audioFile){
   lastText = text;
+  lastAudio = audioFile;
   const box = document.getElementById('arrowBox');
   box.className = 'arrow ' + dir;
   box.innerHTML = dir === 'left' ? ARROW_LEFT : ARROW_RIGHT;
   document.getElementById('actionCaption').textContent = text;
   switchScreen('action');
-  playChimeThenSpeak(text);
+  playChimeThenVoice(text, audioFile);
   restartIdle();
 }
 
 function replay(){
-  playChimeThenSpeak(lastText);
+  playChimeThenVoice(lastText, lastAudio);
   restartIdle();
 }
 
-function playChimeThenSpeak(text){
+function playChimeThenVoice(text, audioFile){
   try{
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     if(ctx.state === 'suspended') ctx.resume();
@@ -243,10 +245,19 @@ function playChimeThenSpeak(text){
     beep(660, 0.22, 0.22);
   }catch(e){}
 
-  /* speak() must run synchronously inside the click handler, not after a
-     setTimeout — a delay breaks the browser's "user activation" window and
-     silently blocks speech synthesis on some browsers/TVs. */
-  speak(text);
+  if(audioFile){
+    const player = new Audio(audioFile);
+    player.onerror = function(){
+      console.warn('오디오 파일을 찾을 수 없어 음성합성으로 대체합니다:', audioFile);
+      speak(text);
+    };
+    player.play().catch(function(err){
+      console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
+      speak(text);
+    });
+  } else {
+    speak(text);
+  }
 }
 
 function speak(text){
