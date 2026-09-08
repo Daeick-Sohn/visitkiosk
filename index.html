@@ -88,15 +88,15 @@ html,body{
 
 #action{ align-items:center; justify-content:center; text-align:center; }
 .action-wrap{ display:flex; flex-direction:column; align-items:center; gap:28px; }
-.arrow{ width:220px; height:220px; display:flex; align-items:center; justify-content:center; }
+.arrow{ width:340px; height:340px; display:flex; align-items:center; justify-content:center; }
 .arrow svg{ width:100%; height:100%; }
 .arrow.left svg{ animation: nudgeLeft 1.1s ease-in-out infinite; }
 .arrow.right svg{ animation: nudgeRight 1.1s ease-in-out infinite; }
-@keyframes nudgeLeft{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(-16px);} }
-@keyframes nudgeRight{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(16px);} }
+@keyframes nudgeLeft{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(-24px);} }
+@keyframes nudgeRight{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(24px);} }
 
-.action-caption{ font-size:38px; font-weight:800; }
-.action-sub{ font-size:18px; color:var(--ink-soft); font-weight:600; }
+.action-caption{ font-size:34px; font-weight:800; color:var(--ink-soft); }
+.action-sub{ font-size:40px; color:var(--primary); font-weight:800; }
 .action-btns{ display:flex; gap:14px; margin-top: 8px; }
 .btn{
   border:none; cursor:pointer; font-family:inherit; font-weight:800; font-size:17px;
@@ -155,9 +155,9 @@ html,body{
 
   <section class="screen" id="action">
     <div class="action-wrap">
+      <div class="action-sub">화살표를 따라가세요</div>
       <div class="arrow" id="arrowBox"></div>
       <div class="action-caption" id="actionCaption"></div>
-      <div class="action-sub">화살표를 따라가세요</div>
       <div class="action-btns">
         <button class="btn btn-ghost" onclick="replay()">다시 듣기</button>
         <button class="btn btn-primary" onclick="goHome()">처음으로</button>
