@@ -188,10 +188,41 @@ function preloadAllAudio(){
     const a = new Audio();
     a.preload = 'auto';
     a.src = path;
-    a.load();
     AUDIO_CACHE[path] = a;
+    primeAudio(a);
+    a.load();
   });
 }
+
+// "Warms up" an audio element by playing it muted for an instant, then
+// pausing and rewinding. This wakes the browser's audio decode/output
+// pipeline ahead of time so the FIRST real (unmuted) playback doesn't get
+// its opening syllable clipped while the pipeline spins up.
+function primeAudio(a){
+  if(a.dataset && a.dataset.primed === '1') return;
+  const tryPrime = function(){
+    a.muted = true;
+    const p = a.play();
+    if(p && p.catch) p.catch(function(){ /* blocked without gesture yet; retried on first touch */ });
+    setTimeout(function(){
+      a.pause();
+      a.currentTime = 0;
+      a.muted = false;
+      if(a.dataset) a.dataset.primed = '1';
+    }, 60);
+  };
+  if(a.readyState >= 3) tryPrime();
+  else a.addEventListener('canplaythrough', tryPrime, { once:true });
+}
+
+// Fallback: some TV/embedded browsers block even muted autoplay before any
+// user gesture. Re-attempt priming on the very first touch anywhere on the
+// kiosk (capture phase runs before the card's own click handler fires).
+document.addEventListener('pointerdown', function primeOnFirstTouch(){
+  document.removeEventListener('pointerdown', primeOnFirstTouch, true);
+  Object.values(AUDIO_CACHE).forEach(primeAudio);
+}, true);
+
 preloadAllAudio();
 
 let idleTimer = null;
