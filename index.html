@@ -48,6 +48,12 @@ html,body{
 .brand .org{ font-size:16px; font-weight:600; color:var(--ink-soft); }
 .brand .title{ font-size:26px; font-weight:800; }
 .clock{ font-size:16px; font-weight:600; color:var(--ink-soft); font-variant-numeric: tabular-nums; }
+.clock-row{ display:flex; align-items:center; gap:8px; }
+.healthdot{
+  width:10px; height:10px; border-radius:50%;
+  background:#C0392B; display:none;
+}
+.healthdot.show{ display:inline-block; }
 
 .hero{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -119,7 +125,10 @@ html,body{
   <section class="screen active" id="home">
     <div class="topbar">
       <div class="brand"><div class="org">교양교육본부</div><div class="title">방문 안내 키오스크</div></div>
-      <div class="clock" id="clock1"></div>
+      <div class="clock-row">
+        <span id="healthDot" class="healthdot" title=""></span>
+        <div class="clock" id="clock1"></div>
+      </div>
     </div>
     <div class="hero">
       <h1>안녕하세요, 무엇 때문에 방문해 주셨나요?</h1>
@@ -181,46 +190,43 @@ const ARROW_LEFT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke
 const ARROW_RIGHT = '<svg viewBox="0 0 24 24" fill="none" stroke="#1F4B3F" stroke-width="1.6"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
 
 const AUDIO_FILES = ['sounds/book.mp3','sounds/admin.mp3','sounds/gift_reading.mp3','sounds/gift_cert.mp3','sounds/gift_rc.mp3','sounds/gift_debate.mp3','sounds/gift_liberal.mp3'];
-const AUDIO_CACHE = {};
 
-function preloadAllAudio(){
+/* Some embedded TV browsers only support a couple of simultaneous audio
+   decode sessions. Creating 7 separate <audio> elements up front made
+   only the first 1-2 actually work. Fix: use ONE shared element and just
+   swap its src per announcement. We still warm the network/browser cache
+   for all 7 files ahead of time via fetch() (no decoder involved), so
+   playback still starts quickly. */
+const sharedPlayer = new Audio();
+sharedPlayer.preload = 'auto';
+
+function prefetchAudioFiles(){
   AUDIO_FILES.forEach(function(path){
-    const a = new Audio();
-    a.preload = 'auto';
-    a.src = path;
-    a.__realPlay = false;
-    AUDIO_CACHE[path] = a;
-    primeAudio(a);
-    a.load();
+    fetch(path).then(function(res){
+      AUDIO_FETCH_OK[path] = res.ok;
+    }).catch(function(){
+      AUDIO_FETCH_OK[path] = false;
+    });
   });
 }
+const AUDIO_FETCH_OK = {};
+prefetchAudioFiles();
 
-// "Warms up" an audio element by playing it muted for an instant, then
-// pausing and rewinding. This wakes the browser's audio decode/output
-// pipeline ahead of time so the FIRST real (unmuted) playback doesn't get
-// its opening syllable clipped while the pipeline spins up.
-// Guarded by __realPlay so this never fights with an actual announcement
-// that started in the meantime (that caused total silence before).
-function primeAudio(a){
-  if(a.__primed) return;
-  const tryPrime = function(){
-    if(a.__realPlay) return;
-    a.muted = true;
-    const p = a.play();
-    if(p && p.catch) p.catch(function(){ /* blocked without gesture yet; fine, real play will still work */ });
-    setTimeout(function(){
-      if(a.__realPlay){ a.muted = false; return; }
-      a.pause();
-      a.currentTime = 0;
-      a.muted = false;
-      a.__primed = true;
-    }, 60);
-  };
-  if(a.readyState >= 3) tryPrime();
-  else a.addEventListener('canplaythrough', tryPrime, { once:true });
-}
-
-preloadAllAudio();
+// One-time silent warm-up of the single decoder channel, independent of
+// the real content files, so the very first real announcement doesn't
+// get its opening syllable clipped while the audio pipeline wakes up.
+const SILENT_CLIP = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+(function primeSharedPlayer(){
+  sharedPlayer.src = SILENT_CLIP;
+  sharedPlayer.muted = true;
+  const p = sharedPlayer.play();
+  if(p && p.catch) p.catch(function(){});
+  setTimeout(function(){
+    sharedPlayer.pause();
+    sharedPlayer.currentTime = 0;
+    sharedPlayer.muted = false;
+  }, 60);
+})();
 
 let idleTimer = null;
 let lastText = '';
@@ -294,29 +300,28 @@ function playChimeThenVoice(text, audioFile){
   }catch(e){}
 
   if(audioFile){
-    const player = AUDIO_CACHE[audioFile] || new Audio(audioFile);
-    player.onerror = function(){
+    sharedPlayer.onerror = function(){
       console.warn('오디오 파일을 찾을 수 없어 음성합성으로 대체합니다:', audioFile);
       speak(text);
     };
 
     const doPlay = function(){
-      player.__realPlay = true;
-      player.currentTime = 0;
-      player.muted = false;
-      player.play().catch(function(err){
+      sharedPlayer.muted = false;
+      sharedPlayer.play().catch(function(err){
         console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
         speak(text);
       });
     };
 
-    // readyState >= 3 (HAVE_FUTURE_DATA) means enough is buffered to play
-    // through without stalling/clipping. Otherwise wait for canplaythrough.
-    if(player.readyState >= 3){
+    sharedPlayer.pause();
+    sharedPlayer.src = audioFile;
+    sharedPlayer.currentTime = 0;
+    sharedPlayer.load();
+
+    if(sharedPlayer.readyState >= 3){
       doPlay();
     } else {
-      player.addEventListener('canplaythrough', doPlay, { once:true });
-      player.load();
+      sharedPlayer.addEventListener('canplaythrough', doPlay, { once:true });
     }
   } else {
     speak(text);
@@ -355,9 +360,47 @@ function tickClock(){
   const str = now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' });
   document.getElementById('clock1').textContent = str;
   document.getElementById('clock2').textContent = str;
+
+  // Quiet-hour self-refresh: once a day, only while idle on the home
+  // screen (never mid-interaction), reload the page so it re-fetches the
+  // latest deployed version and clears any long-uptime memory buildup.
+  const today = now.toDateString();
+  if(now.getHours() === 4 && now.getMinutes() === 0 && window.__lastAutoReload !== today){
+    window.__lastAutoReload = today;
+    if(document.getElementById('home').classList.contains('active')){
+      location.reload();
+    }
+  }
 }
 tickClock();
 setInterval(tickClock, 10000);
+
+// ---------- Self-check: did every audio file actually download OK? ----------
+function checkAudioHealth(){
+  const failed = AUDIO_FILES.filter(function(path){
+    return AUDIO_FETCH_OK[path] === false || AUDIO_FETCH_OK[path] === undefined;
+  });
+  const dot = document.getElementById('healthDot');
+  if(failed.length){
+    dot.classList.add('show');
+    dot.title = '음성 파일을 불러오지 못했습니다: ' + failed.join(', ');
+    console.warn('오디오 자가진단 실패:', failed);
+  } else {
+    dot.classList.remove('show');
+    dot.title = '';
+  }
+}
+setTimeout(checkAudioHealth, 5000);
+
+// ---------- Self-recovery: don't let an unexpected error freeze the kiosk ----------
+window.addEventListener('error', function(e){
+  console.warn('예상치 못한 오류, 자동 복구합니다:', e.message);
+  setTimeout(function(){
+    if(!document.getElementById('home').classList.contains('active')){
+      goHome();
+    }
+  }, 1500);
+});
 </script>
 </body>
 </html>
