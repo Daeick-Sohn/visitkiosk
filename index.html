@@ -188,6 +188,7 @@ function preloadAllAudio(){
     const a = new Audio();
     a.preload = 'auto';
     a.src = path;
+    a.__realPlay = false;
     AUDIO_CACHE[path] = a;
     primeAudio(a);
     a.load();
@@ -198,30 +199,26 @@ function preloadAllAudio(){
 // pausing and rewinding. This wakes the browser's audio decode/output
 // pipeline ahead of time so the FIRST real (unmuted) playback doesn't get
 // its opening syllable clipped while the pipeline spins up.
+// Guarded by __realPlay so this never fights with an actual announcement
+// that started in the meantime (that caused total silence before).
 function primeAudio(a){
-  if(a.dataset && a.dataset.primed === '1') return;
+  if(a.__primed) return;
   const tryPrime = function(){
+    if(a.__realPlay) return;
     a.muted = true;
     const p = a.play();
-    if(p && p.catch) p.catch(function(){ /* blocked without gesture yet; retried on first touch */ });
+    if(p && p.catch) p.catch(function(){ /* blocked without gesture yet; fine, real play will still work */ });
     setTimeout(function(){
+      if(a.__realPlay){ a.muted = false; return; }
       a.pause();
       a.currentTime = 0;
       a.muted = false;
-      if(a.dataset) a.dataset.primed = '1';
+      a.__primed = true;
     }, 60);
   };
   if(a.readyState >= 3) tryPrime();
   else a.addEventListener('canplaythrough', tryPrime, { once:true });
 }
-
-// Fallback: some TV/embedded browsers block even muted autoplay before any
-// user gesture. Re-attempt priming on the very first touch anywhere on the
-// kiosk (capture phase runs before the card's own click handler fires).
-document.addEventListener('pointerdown', function primeOnFirstTouch(){
-  document.removeEventListener('pointerdown', primeOnFirstTouch, true);
-  Object.values(AUDIO_CACHE).forEach(primeAudio);
-}, true);
 
 preloadAllAudio();
 
@@ -304,7 +301,9 @@ function playChimeThenVoice(text, audioFile){
     };
 
     const doPlay = function(){
+      player.__realPlay = true;
       player.currentTime = 0;
+      player.muted = false;
       player.play().catch(function(err){
         console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
         speak(text);
