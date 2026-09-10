@@ -200,6 +200,7 @@ const AUDIO_FILES = ['sounds/book.mp3','sounds/admin.mp3','sounds/gift_reading.m
 const sharedPlayer = new Audio();
 sharedPlayer.preload = 'auto';
 
+const AUDIO_FETCH_OK = {};
 function prefetchAudioFiles(){
   AUDIO_FILES.forEach(function(path){
     fetch(path).then(function(res){
@@ -209,24 +210,7 @@ function prefetchAudioFiles(){
     });
   });
 }
-const AUDIO_FETCH_OK = {};
 prefetchAudioFiles();
-
-// One-time silent warm-up of the single decoder channel, independent of
-// the real content files, so the very first real announcement doesn't
-// get its opening syllable clipped while the audio pipeline wakes up.
-const SILENT_CLIP = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
-(function primeSharedPlayer(){
-  sharedPlayer.src = SILENT_CLIP;
-  sharedPlayer.muted = true;
-  const p = sharedPlayer.play();
-  if(p && p.catch) p.catch(function(){});
-  setTimeout(function(){
-    sharedPlayer.pause();
-    sharedPlayer.currentTime = 0;
-    sharedPlayer.muted = false;
-  }, 60);
-})();
 
 let idleTimer = null;
 let lastText = '';
@@ -306,7 +290,6 @@ function playChimeThenVoice(text, audioFile){
     };
 
     const doPlay = function(){
-      sharedPlayer.muted = false;
       sharedPlayer.play().catch(function(err){
         console.warn('오디오 재생 실패, 음성합성으로 대체합니다:', err);
         speak(text);
@@ -315,7 +298,6 @@ function playChimeThenVoice(text, audioFile){
 
     sharedPlayer.pause();
     sharedPlayer.src = audioFile;
-    sharedPlayer.currentTime = 0;
     sharedPlayer.load();
 
     if(sharedPlayer.readyState >= 3){
